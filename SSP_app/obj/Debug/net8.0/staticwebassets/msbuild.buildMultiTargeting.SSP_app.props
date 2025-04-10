@@ -1,0 +1,3 @@
+﻿<Project>
+  <Import Project="..\build\SSP_app.props" />
+</Project>

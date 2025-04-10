@@ -1,0 +1,80 @@
+﻿@page "/cprnr"
+@using Microsoft.AspNetCore.Authorization
+@using Microsoft.AspNetCore.Identity
+@using SSP_app.Codes
+@using SSP_app.Data
+@using System.ComponentModel.DataAnnotations
+
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+@inject ToDoHandler _toDoHandler
+@inject NavigationManager NavigationManager
+@inject HashingHandler _hashingHandler
+
+@attribute [Authorize(Policy = "RequiresAuthenticated")]
+
+<h3>CPR Number Validation</h3>
+
+@if (!IsValidated)
+{
+    <p>Please provide your CPR Number to proceed:</p>
+    <EditForm Model="Input" OnValidSubmit="SubmitCprNumberAsync">
+        <DataAnnotationsValidator />
+        <div class="form-floating mb-3">
+            <InputText @bind-Value="Input.CprNumber" class="form-control" placeholder="Enter your CPR Number" />
+            <label for="cprNumber" class="form-label">CPR Number</label>
+            <ValidationMessage For="() => Input.CprNumber" class="text-danger" />
+        </div>
+        <button type="submit" class="btn btn-primary">Submit</button>
+    </EditForm>
+}
+
+@code {
+    private ApplicationUser currentUser;
+    private bool IsValidated = false;
+
+    private InputModel Input = new();
+
+    protected override async Task OnInitializedAsync()
+    {
+        var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+        var user = authState.User;
+
+        if (user.Identity != null && user.Identity.IsAuthenticated)
+        {
+            currentUser = await UserManager.GetUserAsync(user);
+        }
+
+        if (await _toDoHandler.HasEnteredCPRNumberAsync(currentUser))
+        {
+            IsValidated = true;
+
+            // Redirect after a short delay
+            await Task.Delay(1000);
+            NavigationManager.NavigateTo("/todo");
+        }
+    }
+
+    private async Task SubmitCprNumberAsync()
+    {
+        if (currentUser != null)
+        {
+            // Save the CPR Number using your ToDoHandler or other logic
+            string hashedCprNumber = _hashingHandler.BCryptHashing(Input.CprNumber);
+            await _toDoHandler.AddCPRNumber(currentUser, hashedCprNumber);
+
+            IsValidated = true;
+
+            // Redirect to the ToDo page
+            NavigationManager.NavigateTo("/todo");
+        }
+    }
+
+    private class InputModel
+    {
+        [Required(ErrorMessage = "CPR Number is required.")]
+        [StringLength(10, ErrorMessage = "CPR Number must be exactly 10 digits.", MinimumLength = 10)]
+        [RegularExpression("^[0-9]*$", ErrorMessage = "CPR Number must contain only digits.")]
+        public string CprNumber { get; set; } = string.Empty;
+    }
+}

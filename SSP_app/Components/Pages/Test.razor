@@ -1,0 +1,9 @@
+﻿@page "/test"
+<h3>Component1</h3>
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(policy: "RequiresAuthenticated")]
+
+@code {
+
+}

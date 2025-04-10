@@ -1,0 +1,118 @@
+﻿@page "/Account/Manage/Roles"
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@using SSP_app.Data
+
+@rendermode InteractiveServer
+
+@inject RoleManager<IdentityRole> RoleManager
+@inject UserManager<ApplicationUser> UserManager
+@inject AuthenticationStateProvider AuthenticationStateProvider
+
+<h3>Manage Roles</h3>
+
+@if (roles == null || roles.Count == 0)
+{
+    <p>Loading roles...</p>
+}
+else
+{
+    <div>
+        <label for="roleSelect">Select a role:</label>
+        <select id="roleSelect" class="form-select" @bind="selectedRoleId">
+            <option value="" disabled selected>Select a role</option>
+            @foreach (var role in roles)
+            {
+                <option value="@role.Id">@role.Name</option>
+            }
+        </select>
+        <button class="btn btn-primary mt-3" @onclick="AssignRoleToUser">Assign Role</button>
+    </div>
+}
+
+<p class="text-success">@statusMessage</p>
+<p class="text-danger">@errorMessage</p>
+
+@code {
+    private List<IdentityRole> roles = new();
+    public string? selectedRoleId;
+    private string? statusMessage;
+    private string? errorMessage;
+    private ApplicationUser? currentUser;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            // Get the current user
+            var authState = await AuthenticationStateProvider.GetAuthenticationStateAsync();
+            var user = authState.User;
+
+            if (user.Identity != null && user.Identity.IsAuthenticated)
+            {
+                currentUser = await UserManager.GetUserAsync(user);
+            }
+
+            // Load all available roles
+            roles = await RoleManager.Roles.ToListAsync();
+
+            if (roles.Count == 0)
+            {
+                await RoleManager.CreateAsync(new IdentityRole("Admin"));
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred while loading roles: {ex.Message}";
+        }
+    }
+
+    private async Task AssignRoleToUser()
+    {
+        if (currentUser == null)
+        {
+            errorMessage = "No user is logged in.";
+            return;
+        }
+
+        if (string.IsNullOrEmpty(selectedRoleId))
+        {
+            errorMessage = "Please select a role.";
+            return;
+        }
+
+        var selectedRole = roles.FirstOrDefault(r => r.Id == selectedRoleId);
+        if (selectedRole == null)
+        {
+            errorMessage = "Invalid role selected.";
+            return;
+        }
+
+        try
+        {
+            // Check if the user is already in the role
+            var isInRole = await UserManager.IsInRoleAsync(currentUser, selectedRole.Name);
+            if (isInRole)
+            {
+                statusMessage = $"User is already in the role '{selectedRole.Name}'.";
+                return;
+            }
+
+            // Assign the role to the user
+            var result = await UserManager.AddToRoleAsync(currentUser, selectedRole.Name);
+            if (result.Succeeded)
+            {
+                statusMessage = $"Role '{selectedRole.Name}' has been assigned to the user.";
+                errorMessage = null;
+            }
+            else
+            {
+                errorMessage = $"Failed to assign role: {string.Join(", ", result.Errors.Select(e => e.Description))}";
+            }
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"An error occurred while assigning the role: {ex.Message}";
+        }
+    }
+}

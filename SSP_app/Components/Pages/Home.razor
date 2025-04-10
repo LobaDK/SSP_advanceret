@@ -1,0 +1,56 @@
+﻿@page "/"
+@using Microsoft.AspNetCore.Components.Authorization
+@using Microsoft.AspNetCore.Components.Web
+@using Microsoft.AspNetCore.Identity
+@using global::SSP_app.Data
+@using Microsoft.AspNetCore.Authorization
+
+@attribute [Authorize(policy: "RequiresAuthenticated")]
+
+@inject IServiceProvider _serviceProvider;
+@inject UserManager<ApplicationUser> _userManager;
+
+<PageTitle>Home</PageTitle>
+
+<h1>Hello, world!</h1>
+
+<AuthorizeView>
+    <Authorized>Welcome back, @context.User.Identity.Name!</Authorized>
+    <NotAuthorized>Please log in to access your account.</NotAuthorized>
+</AuthorizeView>
+<AuthorizeView Roles="admin">
+    <Authorized>You are an admin.</Authorized>
+</AuthorizeView>
+
+@code {
+    protected override async Task OnInitializedAsync()
+    {
+        //await CreateUserRoleAsync("test@test.com", "Admin");
+    }
+
+    private async Task CreateUserRoleAsync(string email, string role)
+    {
+        var roleManager = _serviceProvider.GetRequiredService<RoleManager<IdentityRole>>();
+
+        // Check if the role exists, and create it if it doesn't
+        var roleExists = await roleManager.RoleExistsAsync(role);
+        if (!roleExists)
+        {
+            await roleManager.CreateAsync(new IdentityRole(role));
+        }
+
+        // Find the user by email
+        var user = await _userManager.FindByEmailAsync(email);
+        if (user == null)
+        {
+            throw new InvalidOperationException($"User with email '{email}' does not exist.");
+        }
+
+        // Check if the user is already in the role
+        var isInRole = await _userManager.IsInRoleAsync(user, role);
+        if (!isInRole)
+        {
+            await _userManager.AddToRoleAsync(user, role);
+        }
+    }
+}
