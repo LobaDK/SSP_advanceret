@@ -20,6 +20,7 @@ builder.Services.AddScoped<AuthenticationStateProvider, IdentityRevalidatingAuth
 builder.Services.AddScoped<HashingHandler>();
 builder.Services.AddScoped<ToDoHandler>();
 builder.Services.AddScoped<SymmetricEncryptionHandler>();
+builder.Services.AddScoped<AsymmetricEncryptionHandler>();
 
 builder.Services.AddAuthentication(options =>
     {
