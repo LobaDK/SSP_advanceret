@@ -5,16 +5,17 @@ using TodoApp.Data;
 
 namespace SSP_app.Codes;
 
-public class ToDoHandler(TodoDbContext context)
+public class ToDoHandler(TodoDbContext context, HashingHandler hashingHandler)
 {
     private readonly TodoDbContext _context = context;
+    private readonly HashingHandler _hashingHandler = hashingHandler;
 
     public async Task<bool> HasEnteredCPRNumberAsync(ApplicationUser user)
     {
         return await _context.Cprs.Where(n => n.User == user.UserName && n.CprNr != null).AnyAsync();
     }
 
-    public async Task AddCPRNumber(ApplicationUser user, string cprNumber)
+    public async Task AddCPRNumber(ApplicationUser user, string hashedCprNumber)
     {
         Cpr? cpr = await _context.Cprs.Where(n => n.User == user.UserName).FirstOrDefaultAsync();
 
@@ -23,13 +24,13 @@ public class ToDoHandler(TodoDbContext context)
             cpr = new Cpr
             {
                 User = user.UserName,
-                CprNr = cprNumber
+                CprNr = hashedCprNumber
             };
             _context.Cprs.Add(cpr);
         }
         else
         {
-            cpr.CprNr = cprNumber;
+            cpr.CprNr = hashedCprNumber;
             _context.Cprs.Update(cpr);
         }
 
@@ -80,5 +81,20 @@ public class ToDoHandler(TodoDbContext context)
             _context.TodoLists.Remove(toDoItem);
             await _context.SaveChangesAsync();
         }
+    }
+
+    public async Task<bool> CheckIfCprNumberIsAlreadyRegistered(string cleartextCprNumber)
+    {
+        List<string> hashes = await _context.Cprs.Select(c => c.CprNr).ToListAsync();
+
+        foreach (string hash in hashes)
+        {
+            if (_hashingHandler.BCryptVeryifyHash(cleartextCprNumber, hash))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

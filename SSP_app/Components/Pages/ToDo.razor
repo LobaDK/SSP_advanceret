@@ -9,7 +9,7 @@
 
 @inject ToDoHandler _toDoHandler
 @inject HashingHandler _hashingHandler
-@inject SymmetricEncryptionHandler _encryptionHandler
+@inject AsymmetricEncryptionHandler _encryptionHandler
 @inject UserManager<ApplicationUser> UserManager
 @inject NavigationManager NavigationManager
 @inject AuthenticationStateProvider AuthenticationStateProvider
@@ -141,7 +141,7 @@ else
     {
         if (!string.IsNullOrWhiteSpace(NewToDoItem.Description))
         {
-            string encryptedDescription = _encryptionHandler.Encrypt(NewToDoItem.Description);
+            string encryptedDescription = await _encryptionHandler.Encrypt(NewToDoItem.Description);
             await _toDoHandler.AddToDoItemAsync(currentUser, encryptedDescription);
 
             // Refresh the to-do list

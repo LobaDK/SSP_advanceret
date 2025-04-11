@@ -25,6 +25,10 @@
             <label for="cprNumber" class="form-label">CPR Number</label>
             <ValidationMessage For="() => Input.CprNumber" class="text-danger" />
         </div>
+        @if (!string.IsNullOrEmpty(ErrorMessage))
+        {
+            <p class="text-danger">@ErrorMessage</p>
+        }
         <button type="submit" class="btn btn-primary">Submit</button>
     </EditForm>
 }
@@ -32,6 +36,7 @@
 @code {
     private ApplicationUser currentUser;
     private bool IsValidated = false;
+    private string ErrorMessage = string.Empty;
 
     private InputModel Input = new();
 
@@ -59,8 +64,18 @@
     {
         if (currentUser != null)
         {
-            // Save the CPR Number using your ToDoHandler or other logic
+            // Check if the CPR Number is already registered
+            if (await _toDoHandler.CheckIfCprNumberIsAlreadyRegistered(Input.CprNumber))
+            {
+                // Display an error message and stop further processing
+                ErrorMessage = "This CPR Number is already registered by another user.";
+                return;
+            }
+
+            // Hash the CPR Number
             string hashedCprNumber = _hashingHandler.BCryptHashing(Input.CprNumber);
+
+            // Save the CPR Number
             await _toDoHandler.AddCPRNumber(currentUser, hashedCprNumber);
 
             IsValidated = true;
